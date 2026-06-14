@@ -33,18 +33,22 @@ impl Default for App {
 
 impl App {
     pub fn new_game(&mut self) {
-        self.grid.cells = [[0, 0, 0, 0], [0, 0, 2, 0], [0, 2, 0, 0], [0, 0, 0, 0]]
+        self.grid.cells = [[0, 0, 0, 0], [0, 0, 2, 0], [0, 2, 0, 0], [0, 0, 0, 0]];
+        self.score = 0;
+        self.highest_num = 0;
+        self.game_over = false;
+        self.current_screen = Screen::Playing;
     }
 
     pub fn move_left(&mut self) {
         for row in &mut self.grid.cells {
-            *row = merge_row_left(*row)
+            *row = merge_row_horizontal(*row, "left".to_string())
         }
     }
 
     pub fn move_right(&mut self) {
         for row in &mut self.grid.cells {
-            *row = merge_row_right(*row)
+            *row = merge_row_horizontal(*row, "right".to_string())
         }
     }
 
@@ -72,44 +76,217 @@ impl App {
         todo!()
     }
 
+    // NOTE: dev only remove before release
+    pub fn full_tiles(&mut self) {
+        self.grid.cells = [[2, 4, 2, 2], [8, 16, 2, 4], [2, 2, 0, 0], [0, 0, 4, 2]]
+    }
+
     pub fn exit(&mut self) {
         self.exit = true;
     }
 }
 
-/// [0, 2, 2, 0] -> [4, 0, 0, 0]
-/// strip zeros [2, 2]
-/// merge equal neighbors left to right [4]
-/// then pad zeros on the right [4, 0, 0, 0]
-fn merge_row_left(row: [u32; 4]) -> [u32; 4] {
-    let nums: Vec<u32> = row.into_iter().filter(|&val| val != 0).collect();
+fn merge_row_horizontal(row: [u32; 4], direction: String) -> [u32; 4] {
+    let mut nums: Vec<u32> = row.into_iter().filter(|&val| val != 0).collect();
+    if direction == "right" {
+        nums.reverse();
+    }
+    // reader tracks what val we are reading from the nums vec, if there is a merge we skip past the
+    // next index so we dont double merge the same num
+    let mut reader = 0;
+    let mut writer = 0;
 
     let mut result = [0; 4];
 
-    for (index, val) in nums.iter().enumerate() {
-        result[index] = *val;
+    while reader < nums.len() {
+        if reader + 1 < nums.len() && nums[reader] == nums[reader + 1] {
+            result[writer] = nums[reader] * 2;
+            reader += 2;
+        } else {
+            result[writer] = nums[reader];
+            reader += 1;
+        }
+        writer += 1;
     }
 
+    if direction == "right" {
+        result.reverse();
+    }
     result
 }
 
-/// [4, 0, 0, 2] -> [0, 0, 4, 2]
-/// strip zeros [4, 2]
-/// reverse the list [2, 4]
-/// merge left to right [2, 4]
-/// then pad zeros on the right [2, 4, 0, 0]
-/// reverse [0, 0, 4, 2]
-fn merge_row_right(row: [u32; 4]) -> [u32; 4] {
-    let mut nums: Vec<u32> = row.into_iter().filter(|&val| val != 0).collect();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    nums.reverse();
-
-    let mut result = [0; 4];
-
-    for (index, val) in nums.iter().enumerate() {
-        result[index] = *val;
+    fn build_app_default() -> App {
+        App {
+            highest_num: 0,
+            score: 0,
+            game_over: false,
+            high_score: 0,
+            exit: false,
+            grid: Grid {
+                cells: [[0, 0, 0, 0], [0, 0, 2, 2], [0, 2, 0, 0], [0, 0, 0, 0]],
+            },
+            current_screen: Screen::Playing,
+        }
     }
 
-    result.reverse();
-    result
+    fn build_app_full() -> App {
+        App {
+            highest_num: 0,
+            score: 0,
+            game_over: false,
+            high_score: 0,
+            exit: false,
+            grid: Grid {
+                cells: [[2, 4, 2, 2], [8, 16, 2, 4], [2, 2, 0, 0], [0, 0, 4, 2]],
+            },
+            current_screen: Screen::Playing,
+        }
+    }
+
+    #[test]
+    fn full_game_play() {
+        let mut app = build_app_full();
+        app.move_left();
+        assert_eq!(
+            app.grid.cells,
+            [[2, 4, 4, 0], [8, 16, 2, 4], [4, 0, 0, 0], [4, 2, 0, 0]]
+        );
+
+        app.move_right();
+        assert_eq!(
+            app.grid.cells,
+            [[0, 0, 2, 8], [8, 16, 2, 4], [0, 0, 0, 4], [0, 0, 4, 2]]
+        );
+
+        app.move_left();
+        assert_eq!(
+            app.grid.cells,
+            [[2, 8, 0, 0], [8, 16, 2, 4], [4, 0, 0, 0], [4, 2, 0, 0]]
+        );
+
+        app.move_right();
+        assert_eq!(
+            app.grid.cells,
+            [[0, 0, 2, 8], [8, 16, 2, 4], [0, 0, 0, 4], [0, 0, 4, 2]]
+        );
+    }
+
+    #[test]
+    fn rows_merge_left() {
+        assert_eq!(
+            merge_row_horizontal([0, 2, 4, 8], "left".to_string()),
+            [2, 4, 8, 0]
+        );
+        assert_eq!(
+            merge_row_horizontal([2, 4, 8, 0], "left".to_string()),
+            [2, 4, 8, 0]
+        );
+        assert_eq!(
+            merge_row_horizontal([2, 2, 4, 2], "left".to_string()),
+            [4, 4, 2, 0]
+        );
+        assert_eq!(
+            merge_row_horizontal([0, 0, 0, 0], "left".to_string()),
+            [0, 0, 0, 0]
+        );
+        assert_eq!(
+            merge_row_horizontal([2, 4, 4, 0], "left".to_string()),
+            [2, 8, 0, 0]
+        );
+    }
+
+    #[test]
+    fn rows_move_left() {
+        let mut app = build_app_default();
+        app.move_left();
+        assert_eq!(
+            app.grid.cells,
+            [[0, 0, 0, 0], [4, 0, 0, 0], [2, 0, 0, 0], [0, 0, 0, 0]]
+        );
+
+        let mut app = build_app_full();
+        app.move_left();
+        assert_eq!(
+            app.grid.cells,
+            [[2, 4, 4, 0], [8, 16, 2, 4], [4, 0, 0, 0], [4, 2, 0, 0]]
+        );
+    }
+
+    #[test]
+    fn rows_merge_right() {
+        assert_eq!(
+            merge_row_horizontal([0, 2, 4, 8], "right".to_string()),
+            [0, 2, 4, 8]
+        );
+        assert_eq!(
+            merge_row_horizontal([0, 2, 4, 0], "right".to_string()),
+            [0, 0, 2, 4]
+        );
+        assert_eq!(
+            merge_row_horizontal([0, 0, 0, 0], "right".to_string()),
+            [0, 0, 0, 0]
+        );
+        assert_eq!(
+            merge_row_horizontal([0, 2, 2, 0], "right".to_string()),
+            [0, 0, 0, 4]
+        );
+    }
+
+    #[test]
+    fn rows_move_right() {
+        let mut app = build_app_default();
+        app.move_right();
+
+        assert_eq!(
+            app.grid.cells,
+            [[0, 0, 0, 0], [0, 0, 0, 4], [0, 0, 0, 2], [0, 0, 0, 0]]
+        );
+
+        let mut app = build_app_full();
+        app.move_right();
+        assert_eq!(
+            app.grid.cells,
+            [[0, 2, 4, 4], [8, 16, 2, 4], [0, 0, 0, 4], [0, 0, 4, 2]]
+        );
+    }
+
+    // #[test]
+    // fn rows_merge_up() {
+    //     assert_eq!(merge_row_right([0, 2, 4, 8]), [0, 2, 4, 8]);
+    //     assert_eq!(merge_row_right([0, 2, 4, 0]), [0, 0, 2, 4]);
+    //     assert_eq!(merge_row_right([0, 0, 0, 0]), [0, 0, 0, 0]);
+    // }
+
+    // #[test]
+    // fn rows_move_up() {
+    //     let mut app = build_app();
+    //     app.move_right();
+    //
+    //     assert_eq!(
+    //         app.grid.cells,
+    //         [[0, 2, 2, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+    //     );
+    // }
+
+    // #[test]
+    // fn rows_merge_down() {
+    //     assert_eq!(merge_row_right([0, 2, 4, 8]), [0, 2, 4, 8]);
+    //     assert_eq!(merge_row_right([0, 2, 4, 0]), [0, 0, 2, 4]);
+    //     assert_eq!(merge_row_right([0, 0, 0, 0]), [0, 0, 0, 0]);
+    // }
+
+    // #[test]
+    // fn rows_move_down() {
+    //     let mut app = build_app();
+    //     app.move_right();
+    //
+    //     assert_eq!(
+    //         app.grid.cells,
+    //         [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 2, 2, 0]]
+    //     );
+    // }
 }

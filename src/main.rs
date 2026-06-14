@@ -42,6 +42,8 @@ pub fn handle_key_event(app: &mut App, key_event: KeyEvent) {
             KeyCode::Char('k') => app.move_up(),
             KeyCode::Char('s') => app.show_scores(),
             KeyCode::Char('n') => app.new_game(),
+            // NOTE: dev only remove before release
+            KeyCode::Char('f') => app.full_tiles(),
             _ => {}
         },
         Screen::GameOver => match key_event.code {
