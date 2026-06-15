@@ -1,3 +1,5 @@
+use rand::random_range;
+
 use crate::ui::Grid;
 
 pub struct App {
@@ -52,9 +54,11 @@ impl App {
         match direction {
             Direction::Up => {
                 self.grid = merge_row_vertical(self, Direction::Up);
+                self.spawn_tile();
             }
             Direction::Down => {
                 self.grid = merge_row_vertical(self, Direction::Down);
+                self.spawn_tile();
             }
             Direction::Left => {
                 let mut cells = self.grid.cells;
@@ -64,6 +68,7 @@ impl App {
                 }
 
                 self.grid.cells = cells;
+                self.spawn_tile();
             }
             Direction::Right => {
                 let mut cells = self.grid.cells;
@@ -73,18 +78,38 @@ impl App {
                 }
 
                 self.grid.cells = cells;
+                self.spawn_tile();
             }
         }
+    }
+
+    // TODO: Bug - when at an edge and unable to move any cells that direction currently a move in
+    // that dir is still allowed
+    pub fn spawn_tile(&mut self) {
+        let nums = [2, 4];
+        let random_index = random_range(0..=1);
+        let rand_selected = nums[random_index];
+
+        let mut zero_coordinates: Vec<(usize, usize)> = Vec::new();
+
+        for (row_index, row) in self.grid.cells.iter().enumerate() {
+            for (col_index, col) in row.iter().enumerate() {
+                if *col == 0 {
+                    zero_coordinates.push((row_index, col_index));
+                }
+            }
+        }
+
+        let rand_coordinate = random_range(0..=zero_coordinates.len() - 1);
+        let row = zero_coordinates[rand_coordinate].0;
+        let col = zero_coordinates[rand_coordinate].1;
+
+        self.grid.cells[row][col] = rand_selected;
     }
 
     /// TODO: need to wire up scores to be saved in a .txt as "date score highest_num"
     /// access file and show in popup sorted by score
     pub fn show_scores(&mut self) {
-        todo!()
-    }
-
-    /// TODO: calc open fields, randonmize 2 or 4, and popup in rand open
-    pub fn spawn_tile(&mut self) {
         todo!()
     }
 
@@ -127,7 +152,7 @@ fn merge_row_horizontal(app: &mut App, row: [u32; 4], direction: Direction) -> [
 fn merge_row_vertical(app: &mut App, direction: Direction) -> Grid {
     let mut cells = [[0; 4]; 4];
 
-    for col_index in 0..4 {
+    for (col_index, _) in cells.into_iter().enumerate() {
         let column = [
             app.grid.cells[0][col_index],
             app.grid.cells[1][col_index],
@@ -231,24 +256,25 @@ mod tests {
 
     #[test]
     fn rows_merge_left() {
+        let mut app = build_app_default();
         assert_eq!(
-            merge_row_horizontal([0, 2, 4, 8], Direction::Left),
+            merge_row_horizontal(&mut app, [0, 2, 4, 8], Direction::Left),
             [2, 4, 8, 0]
         );
         assert_eq!(
-            merge_row_horizontal([2, 4, 8, 0], Direction::Left),
+            merge_row_horizontal(&mut app, [2, 4, 8, 0], Direction::Left),
             [2, 4, 8, 0]
         );
         assert_eq!(
-            merge_row_horizontal([2, 2, 4, 2], Direction::Left),
+            merge_row_horizontal(&mut app, [2, 2, 4, 2], Direction::Left),
             [4, 4, 2, 0]
         );
         assert_eq!(
-            merge_row_horizontal([0, 0, 0, 0], Direction::Left),
+            merge_row_horizontal(&mut app, [0, 0, 0, 0], Direction::Left),
             [0, 0, 0, 0]
         );
         assert_eq!(
-            merge_row_horizontal([2, 4, 4, 0], Direction::Left),
+            merge_row_horizontal(&mut app, [2, 4, 4, 0], Direction::Left),
             [2, 8, 0, 0]
         );
     }
@@ -272,20 +298,21 @@ mod tests {
 
     #[test]
     fn rows_merge_right() {
+        let mut app = build_app_default();
         assert_eq!(
-            merge_row_horizontal([0, 2, 4, 8], Direction::Right),
+            merge_row_horizontal(&mut app, [0, 2, 4, 8], Direction::Right),
             [0, 2, 4, 8]
         );
         assert_eq!(
-            merge_row_horizontal([0, 2, 4, 0], Direction::Right),
+            merge_row_horizontal(&mut app, [0, 2, 4, 0], Direction::Right),
             [0, 0, 2, 4]
         );
         assert_eq!(
-            merge_row_horizontal([0, 0, 0, 0], Direction::Right),
+            merge_row_horizontal(&mut app, [0, 0, 0, 0], Direction::Right),
             [0, 0, 0, 0]
         );
         assert_eq!(
-            merge_row_horizontal([0, 2, 2, 0], Direction::Right),
+            merge_row_horizontal(&mut app, [0, 2, 2, 0], Direction::Right),
             [0, 0, 0, 4]
         );
     }
