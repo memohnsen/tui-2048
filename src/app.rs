@@ -1,4 +1,4 @@
-use crate::grid::Grid;
+use crate::ui::Grid;
 
 pub struct App {
     pub highest_num: u8,
@@ -57,21 +57,24 @@ impl App {
                 self.grid = merge_row_vertical(self, Direction::Down);
             }
             Direction::Left => {
-                for row in &mut self.grid.cells {
-                    *row = merge_row_horizontal(*row, Direction::Left)
+                let mut cells = self.grid.cells;
+
+                for row in &mut cells {
+                    *row = merge_row_horizontal(self, *row, Direction::Left)
                 }
+
+                self.grid.cells = cells;
             }
             Direction::Right => {
-                for row in &mut self.grid.cells {
-                    *row = merge_row_horizontal(*row, Direction::Right)
+                let mut cells = self.grid.cells;
+
+                for row in &mut cells {
+                    *row = merge_row_horizontal(self, *row, Direction::Right)
                 }
+
+                self.grid.cells = cells;
             }
         }
-    }
-
-    /// Score is calculated by the addition of current score + sum of any merged values
-    pub fn calculate_score(&mut self) {
-        todo!()
     }
 
     /// TODO: need to wire up scores to be saved in a .txt as "date score highest_num"
@@ -90,7 +93,7 @@ impl App {
     }
 }
 
-fn merge_row_horizontal(row: [u32; 4], direction: Direction) -> [u32; 4] {
+fn merge_row_horizontal(app: &mut App, row: [u32; 4], direction: Direction) -> [u32; 4] {
     let mut nums: Vec<u32> = row.into_iter().filter(|&val| val != 0).collect();
     if direction == Direction::Right || direction == Direction::Down {
         nums.reverse();
@@ -106,6 +109,7 @@ fn merge_row_horizontal(row: [u32; 4], direction: Direction) -> [u32; 4] {
     while reader < nums.len() {
         if reader + 1 < nums.len() && nums[reader] == nums[reader + 1] {
             result[writer] = nums[reader] * 2;
+            app.score += nums[reader] * 2;
             reader += 2;
         } else {
             result[writer] = nums[reader];
@@ -131,7 +135,7 @@ fn merge_row_vertical(app: &mut App, direction: Direction) -> Grid {
             app.grid.cells[3][col_index],
         ];
 
-        let merged = merge_row_horizontal(column, direction.clone());
+        let merged = merge_row_horizontal(app, column, direction.clone());
 
         for row_index in 0..4 {
             cells[row_index][col_index] = merged[row_index]
