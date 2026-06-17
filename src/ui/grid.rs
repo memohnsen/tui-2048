@@ -1,56 +1,13 @@
 use ratatui::{
+    Frame,
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
     style::{Color, Stylize},
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
+    text::Line,
+    widgets::{Block, Clear, Padding, Paragraph, Widget},
 };
 
-use crate::app::{App, Screen};
-
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" 2048 ".bold());
-        let instructions = match self.current_screen {
-            Screen::Playing => Line::from(vec![
-                " Move ".into(),
-                "<hjkl or Arrow Keys>".blue().bold(),
-                " New Game ".into(),
-                "<n>".blue().bold(),
-                " High Scores ".into(),
-                "<s> ".blue().bold(),
-                " Quit ".into(),
-                "<q> ".blue().bold(),
-            ]),
-            Screen::GameOver => Line::from(vec![]),
-            Screen::Scores => Line::from(vec![]),
-        };
-        let block = Block::bordered()
-            .title(title.centered().bold())
-            .title_bottom(instructions.centered())
-            .border_set(border::THICK);
-
-        let inner = block.inner(area);
-        block.render(area, buf);
-
-        let [score_area, grid_area] =
-            Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(inner);
-
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Score: ".into(),
-            self.score.to_string().yellow(),
-            " | High Score: ".into(),
-            self.high_score.to_string().yellow(),
-        ])]);
-
-        Paragraph::new(counter_text)
-            .centered()
-            .render(score_area, buf);
-
-        self.grid.render(grid_area, buf);
-    }
-}
+use crate::app::{App, read_scores_file};
 
 #[derive(Debug, PartialEq)]
 pub struct Grid {
@@ -111,7 +68,6 @@ pub fn get_bg_colors(num: String) -> Color {
     }
 }
 
-// TODO: center nums in block
 impl Widget for &Grid {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let col_constraints = (0..4).map(|_| Constraint::Length(40));
@@ -136,9 +92,60 @@ impl Widget for &Grid {
             let color = get_bg_colors(text.clone());
 
             Paragraph::new(text.bold().fg(Color::Black))
-                .block(Block::bordered().fg(color).bg(color))
+                .block(
+                    Block::bordered()
+                        .fg(color)
+                        .bg(color)
+                        .padding(Padding::vertical(3)),
+                )
                 .centered()
                 .render(cell, buf);
         }
     }
+}
+
+pub fn render_game_over_popup(frame: &mut Frame, app: &App) {
+    let area = frame.area();
+
+    let controls = Line::from(vec![
+        " New Game ".into(),
+        "<n>".blue().bold(),
+        " High Scores ".into(),
+        "<s> ".blue().bold(),
+        " Quit ".into(),
+        "<q> ".blue().bold(),
+    ]);
+
+    let popup_block = Block::bordered().title("Game Over").title_bottom(controls);
+    let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
+    frame.render_widget(Clear, centered_area);
+    let paragraph =
+        Paragraph::new(format!("You finished with a score of {}", app.score)).block(popup_block);
+    frame.render_widget(paragraph, centered_area);
+}
+
+// TODO:
+// 1. allow this to be scrollable with jk to go through all results
+// 2. add ability to change sorting between score and date
+pub fn render_scores_popup(frame: &mut Frame) {
+    let area = frame.area();
+
+    let controls = Line::from(vec![
+        " New Game ".into(),
+        "<n>".blue().bold(),
+        " Hide Scores ".into(),
+        "<s> ".blue().bold(),
+        " Quit ".into(),
+        "<q> ".blue().bold(),
+    ]);
+
+    let popup_block = Block::bordered()
+        .title("High Scores")
+        .title_bottom(controls);
+    let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
+    frame.render_widget(Clear, centered_area);
+
+    let scores = read_scores_file();
+    let paragraph = Paragraph::new(scores).block(popup_block);
+    frame.render_widget(paragraph, centered_area);
 }

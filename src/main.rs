@@ -1,12 +1,11 @@
 use std::io;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::layout::Constraint;
-use ratatui::style::Stylize;
-use ratatui::text::Line;
-use ratatui::widgets::{Block, Clear, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
-use tui_2048::app::{App, Direction, Screen};
+use tui_2048::{
+    app::{App, Direction, Screen},
+    ui::grid::{render_game_over_popup, render_scores_popup},
+};
 
 fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
@@ -19,10 +18,11 @@ pub fn run(app: &mut App, terminal: &mut DefaultTerminal) -> io::Result<()> {
         terminal.draw(|frame| {
             draw(app, frame);
             if app.game_over {
+                let _ = app.write_scores_to_file();
                 render_game_over_popup(frame, app);
             }
             if app.showing_score {
-                render_scores_popup(frame, app);
+                render_scores_popup(frame);
             }
         })?;
         handle_events(app)?;
@@ -72,45 +72,4 @@ pub fn handle_key_event(app: &mut App, key_event: KeyEvent) {
             _ => {}
         },
     }
-}
-
-pub fn render_game_over_popup(frame: &mut Frame, app: &App) {
-    let area = frame.area();
-
-    let controls = Line::from(vec![
-        " New Game ".into(),
-        "<n>".blue().bold(),
-        " High Scores ".into(),
-        "<s> ".blue().bold(),
-        " Quit ".into(),
-        "<q> ".blue().bold(),
-    ]);
-
-    let popup_block = Block::bordered().title("Game Over").title_bottom(controls);
-    let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
-    frame.render_widget(Clear, centered_area);
-    let paragraph =
-        Paragraph::new(format!("You finished with a score of {}", app.score)).block(popup_block);
-    frame.render_widget(paragraph, centered_area);
-}
-
-pub fn render_scores_popup(frame: &mut Frame, app: &App) {
-    let area = frame.area();
-
-    let controls = Line::from(vec![
-        " New Game ".into(),
-        "<n>".blue().bold(),
-        " Hide Scores ".into(),
-        "<s> ".blue().bold(),
-        " Quit ".into(),
-        "<q> ".blue().bold(),
-    ]);
-
-    let popup_block = Block::bordered()
-        .title("High Scores")
-        .title_bottom(controls);
-    let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
-    frame.render_widget(Clear, centered_area);
-    let paragraph = Paragraph::new(format!("1. {}", app.score)).block(popup_block);
-    frame.render_widget(paragraph, centered_area);
 }

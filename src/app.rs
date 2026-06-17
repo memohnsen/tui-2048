@@ -1,9 +1,14 @@
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use std::{fs::OpenOptions, io::Result};
+
 use rand::{
     distr::{Bernoulli, Distribution},
     random_range, rng,
 };
 
-use crate::{app::Screen::Scores, ui::Grid};
+use crate::ui::grid::Grid;
 
 pub struct App {
     pub highest_num: u8,
@@ -128,8 +133,8 @@ impl App {
         self.grid.cells[row][col] = rand_selected;
     }
 
-    /// TODO: need to wire up scores to be saved in a .txt as "date score highest_num"
-    /// access file and show in popup sorted by score
+    // TODO: track highest_num
+
     pub fn toggle_scores(&mut self) {
         self.showing_score = !self.showing_score;
         if self.current_screen == Screen::Scores {
@@ -137,6 +142,28 @@ impl App {
         } else {
             self.current_screen = Screen::Scores
         };
+    }
+
+    pub fn write_scores_to_file(&mut self) -> Result<()> {
+        let home = std::env::var("HOME").unwrap_or("~".to_string());
+
+        let mut path = PathBuf::from(home);
+        path.push(".config/2048");
+
+        fs::create_dir_all(&path)?;
+        path.push("scores.txt");
+
+        if !path.exists() {
+            let mut file = File::create(&path)?;
+            writeln!(file, "Date Score Highest Num")?;
+        }
+
+        let mut file = OpenOptions::new().append(true).open(path)?;
+
+        let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+
+        writeln!(file, "{} {} {}", now, self.score, self.highest_num)?;
+        Ok(())
     }
 
     pub fn exit(&mut self) {
@@ -198,6 +225,20 @@ fn merge_row_vertical(app: &mut App, direction: Direction) -> Grid {
     }
 
     Grid { cells }
+}
+
+pub fn read_scores_file() -> String {
+    let home = std::env::var("HOME").unwrap_or("~".to_string());
+
+    let mut path = PathBuf::from(home);
+    path.push(".config/2048/scores.txt");
+
+    let contents = fs::read_to_string(path);
+
+    match contents {
+        Ok(c) => c,
+        Err(_) => "You have no high scores saved yet".to_string(),
+    }
 }
 
 #[cfg(test)]
