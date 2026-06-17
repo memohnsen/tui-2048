@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use ratatui::{
     Frame,
     buffer::Buffer,
@@ -7,7 +9,10 @@ use ratatui::{
     widgets::{Block, Clear, Padding, Paragraph, Widget},
 };
 
-use crate::app::{App, read_scores_file};
+use crate::{
+    SCORES_PATH,
+    app::{App, read_scores_file},
+};
 
 #[derive(Debug, PartialEq)]
 pub struct Grid {
@@ -145,7 +150,12 @@ pub fn render_scores_popup(frame: &mut Frame) {
     let centered_area = area.centered(Constraint::Percentage(60), Constraint::Percentage(20));
     frame.render_widget(Clear, centered_area);
 
-    let scores = read_scores_file();
+    let home = std::env::var("HOME").unwrap_or("~".to_string());
+
+    let mut path = PathBuf::from(home);
+    path.push(SCORES_PATH);
+
+    let scores = read_scores_file(path);
     let paragraph = Paragraph::new(scores).block(popup_block);
     frame.render_widget(paragraph, centered_area);
 }

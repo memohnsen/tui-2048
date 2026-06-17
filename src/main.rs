@@ -1,9 +1,10 @@
-use std::io;
+use std::{io, path::PathBuf};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
 use tui_2048::{
-    app::{App, Direction, Screen},
+    SCORES_PATH,
+    app::{App, Direction, Screen, write_scores_to_file},
     ui::grid::{render_game_over_popup, render_scores_popup},
 };
 
@@ -18,7 +19,12 @@ pub fn run(app: &mut App, terminal: &mut DefaultTerminal) -> io::Result<()> {
         terminal.draw(|frame| {
             draw(app, frame);
             if app.game_over {
-                let _ = app.write_scores_to_file();
+                let home = std::env::var("HOME").unwrap_or("~".to_string());
+
+                let mut path = PathBuf::from(home);
+                path.push(SCORES_PATH);
+
+                let _ = write_scores_to_file(app, path);
                 render_game_over_popup(frame, app);
             }
             if app.showing_score {

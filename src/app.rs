@@ -151,28 +151,6 @@ impl App {
         };
     }
 
-    pub fn write_scores_to_file(&mut self) -> Result<()> {
-        let home = std::env::var("HOME").unwrap_or("~".to_string());
-
-        let mut path = PathBuf::from(home);
-        path.push(".config/2048");
-
-        fs::create_dir_all(&path)?;
-        path.push("scores.txt");
-
-        if !path.exists() {
-            let mut file = File::create(&path)?;
-            writeln!(file, "Date Score Highest Num")?;
-        }
-
-        let mut file = OpenOptions::new().append(true).open(path)?;
-
-        let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
-
-        writeln!(file, "{} {} {}", now, self.score, self.highest_num)?;
-        Ok(())
-    }
-
     pub fn exit(&mut self) {
         self.exit = true;
     }
@@ -234,18 +212,33 @@ fn merge_row_vertical(app: &mut App, direction: Direction) -> Grid {
     Grid { cells }
 }
 
-pub fn read_scores_file() -> String {
-    let home = std::env::var("HOME").unwrap_or("~".to_string());
-
-    let mut path = PathBuf::from(home);
-    path.push(".config/2048/scores.txt");
-
+pub fn read_scores_file(path: PathBuf) -> String {
     let contents = fs::read_to_string(path);
 
     match contents {
         Ok(c) => c,
         Err(_) => "You have no high scores saved yet".to_string(),
     }
+}
+
+pub fn write_scores_to_file(app: &mut App, path: PathBuf) -> Result<()> {
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    if !path.exists() {
+        let mut file = File::create(&path)?;
+        writeln!(file, "Date Score Highest Num")?;
+    }
+
+    let mut file = OpenOptions::new().append(true).open(path)?;
+
+    let now = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+
+    writeln!(file, "{} {} {}", now, app.score, app.highest_num)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -343,5 +336,27 @@ mod tests {
         app.spawn_tile();
         let new = app.grid.cells;
         assert_ne!(original, new);
+    }
+
+    #[test]
+    fn read_write_scores() {
+        let mut app = build_app();
+        let path = PathBuf::from("./scores_app_test.txt");
+        let _ = fs::remove_file(&path);
+
+        write_scores_to_file(&mut app, path.clone()).unwrap();
+        let contents = read_scores_file(path.clone());
+
+        let expected = format!(
+            "Date Score Highest Num\n{} 0 0\n",
+            chrono::Local::now().format("%Y-%m-%d %H:%M"),
+        );
+
+        assert_eq!(contents, expected);
+
+        fs::remove_file(&path).unwrap();
+
+        let contents = read_scores_file(path);
+        assert_eq!(contents, "You have no high scores saved yet".to_string());
     }
 }
