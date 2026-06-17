@@ -68,11 +68,9 @@ impl App {
         match direction {
             Direction::Up => {
                 self.grid = merge_row_vertical(self, Direction::Up);
-                self.spawn_tile();
             }
             Direction::Down => {
                 self.grid = merge_row_vertical(self, Direction::Down);
-                self.spawn_tile();
             }
             Direction::Left => {
                 let mut cells = self.grid.cells;
@@ -82,7 +80,6 @@ impl App {
                 }
 
                 self.grid.cells = cells;
-                self.spawn_tile();
             }
             Direction::Right => {
                 let mut cells = self.grid.cells;
@@ -92,9 +89,11 @@ impl App {
                 }
 
                 self.grid.cells = cells;
-                self.spawn_tile();
             }
         }
+
+        self.spawn_tile();
+        self.update_highest_num();
     }
 
     /// Takes in self and mutates it to add a 2 or a 4, with the program weighting more to the 2
@@ -133,7 +132,15 @@ impl App {
         self.grid.cells[row][col] = rand_selected;
     }
 
-    // TODO: track highest_num
+    pub fn update_highest_num(&mut self) {
+        let cells = self.grid.cells;
+
+        let max = cells.iter().flatten().copied().max().unwrap_or(0);
+
+        if max > self.highest_num as u32 {
+            self.highest_num = max as u8;
+        }
+    }
 
     pub fn toggle_scores(&mut self) {
         self.showing_score = !self.showing_score;

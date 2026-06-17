@@ -60,7 +60,7 @@ pub fn get_highest_score() -> String {
 
     for line in score_lines {
         let score_from_entry: Vec<&str> = line.split(" ").collect();
-        high_score.push(score_from_entry[1]);
+        high_score.push(score_from_entry[2]);
     }
 
     match high_score.iter().max() {
