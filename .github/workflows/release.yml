@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   publish:
     name: Publish for ${{ matrix.os }}
@@ -13,14 +16,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: my_bin
-            asset_name: my_bin-linux-amd64
+            target: x86_64-unknown-linux-gnu
           - os: windows-latest
-            artifact_name: my_bin.exe
-            asset_name: my_bin-windows-amd64.exe
+            target: x86_64-pc-windows-msvc
           - os: macos-latest
-            artifact_name: my_bin
-            asset_name: my_bin-macos-amd64
+            target: x86_64-apple-darwin
 
     steps:
     - name: Checkout code
@@ -28,11 +28,15 @@ jobs:
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
 
     - name: Build in Release Mode
-      run: cargo build --release
+      run: cargo build --release --target ${{ matrix.target }}
 
     - name: Upload Binaries to GitHub Release
       uses: houseabsolute/actions-rust-release@v0
       with:
         executable-name: tui_2048
+        target: ${{ matrix.target }}
+        changes-file: "Changes.md"
