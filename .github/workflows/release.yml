@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Publish for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: my_bin
+            asset_name: my_bin-linux-amd64
+          - os: windows-latest
+            artifact_name: my_bin.exe
+            asset_name: my_bin-windows-amd64.exe
+          - os: macos-latest
+            artifact_name: my_bin
+            asset_name: my_bin-macos-amd64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build in Release Mode
+      run: cargo build --release
+
+    - name: Upload Binaries to GitHub Release
+      uses: houseabsolute/actions-rust-release@v0
+      with:
+        executable-name: tui_2048
