@@ -1,16 +1,20 @@
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
-use crate::{SCORES_PATH, app::read_scores_file};
+use crate::{
+    SCORES_PATH,
+    app::{App, read_scores_file},
+    terminal::run,
+};
 
 pub enum Commands {
     Scores(String),
-    New,
+    New(String),
     Help,
     Other,
 }
 
 impl Commands {
-    pub fn execute(&self) {
+    pub fn execute(&self) -> io::Result<()> {
         match self {
             Commands::Scores(subcommand) => {
                 let home = std::env::var("HOME").unwrap_or("~".to_string());
@@ -30,17 +34,37 @@ impl Commands {
                         println!("{line}");
                     }
                 }
+                Ok(())
             }
-            Commands::New => {
-                println!("new");
-            }
+            Commands::New(subcommand) => match subcommand.as_str() {
+                "timed-5" => {
+                    let mut terminal = ratatui::init();
+                    let mut app = App::default();
+                    run(&mut app, &mut terminal)?;
+                    Ok(())
+                }
+                "timed-10" => {
+                    let mut terminal = ratatui::init();
+                    let mut app = App::default();
+                    run(&mut app, &mut terminal)?;
+                    Ok(())
+                }
+                &_ => {
+                    let mut terminal = ratatui::init();
+                    let mut app = App::default();
+                    run(&mut app, &mut terminal)?;
+                    Ok(())
+                }
+            },
             Commands::Help => {
                 help();
+                Ok(())
             }
             Commands::Other => {
                 println!(
                     "Not a valid command. Type tui-2048 help to see a list of all available commands"
                 );
+                Ok(())
             }
         }
     }
@@ -55,7 +79,7 @@ pub fn run_command(command: Vec<String>) {
 
     match command[0].as_str() {
         "scores" => Commands::Scores(subcommand).execute(),
-        "new" => Commands::New.execute(),
+        "new" => Commands::New(subcommand).execute(),
         "help" => Commands::Help.execute(),
         &_ => Commands::Other.execute(),
     };
