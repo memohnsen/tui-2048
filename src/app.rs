@@ -22,6 +22,7 @@ pub struct App {
     pub grid: Grid,
     pub current_screen: Screen,
     pub game_style: GameStyle,
+    pub chosen_game_style: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,6 +65,7 @@ pub enum Screen {
     Playing,
     GameOver,
     Scores,
+    GameStyle,
 }
 
 #[derive(PartialEq, Clone)]
@@ -88,6 +90,7 @@ impl Default for App {
             },
             current_screen: Screen::Playing,
             game_style: GameStyle::Normal,
+            chosen_game_style: false,
         }
     }
 }
@@ -100,6 +103,24 @@ impl App {
         self.game_over = false;
         self.current_screen = Screen::Playing;
         self.game_style = GameStyle::Normal;
+    }
+
+    pub fn new_game_timed5(&mut self) {
+        self.grid.cells = [[0, 0, 0, 0], [0, 0, 2, 0], [0, 2, 0, 0], [0, 0, 0, 0]];
+        self.score = 0;
+        self.highest_num = 0;
+        self.game_over = false;
+        self.current_screen = Screen::Playing;
+        self.game_style = GameStyle::Timed5;
+    }
+
+    pub fn new_game_timed10(&mut self) {
+        self.grid.cells = [[0, 0, 0, 0], [0, 0, 2, 0], [0, 2, 0, 0], [0, 0, 0, 0]];
+        self.score = 0;
+        self.highest_num = 0;
+        self.game_over = false;
+        self.current_screen = Screen::Playing;
+        self.game_style = GameStyle::Timed10;
     }
 
     pub fn move_nums(&mut self, direction: Direction) {
@@ -334,6 +355,7 @@ mod tests {
             },
             current_screen: Screen::Playing,
             game_style: GameStyle::Normal,
+            chosen_game_style: true,
         }
     }
 
@@ -355,6 +377,7 @@ mod tests {
             },
             current_screen: Screen::Playing,
             game_style: GameStyle::Normal,
+            chosen_game_style: true,
         }
     }
 

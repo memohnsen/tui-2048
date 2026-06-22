@@ -11,7 +11,7 @@ use ratatui::{
 
 use crate::{
     SCORES_PATH,
-    app::{App, Screen, read_scores_file},
+    app::{App, GameStyle, Screen, read_scores_file},
 };
 
 impl Widget for &App {
@@ -30,6 +30,7 @@ impl Widget for &App {
             ]),
             Screen::GameOver => Line::from(vec![]),
             Screen::Scores => Line::from(vec![]),
+            Screen::GameStyle => Line::from(vec![]),
         };
         let block = Block::bordered()
             .title(title.centered().bold())
@@ -47,12 +48,22 @@ impl Widget for &App {
         let mut path = PathBuf::from(home);
         path.push(SCORES_PATH);
 
-        let counter_text = Text::from(vec![Line::from(vec![
-            "Score: ".into(),
-            self.score.to_string().yellow(),
-            " | High Score: ".into(),
-            get_highest_score(path).yellow(),
-        ])]);
+        let counter_text = match self.game_style {
+            GameStyle::Normal => Text::from(vec![Line::from(vec![
+                "Score: ".into(),
+                self.score.to_string().yellow(),
+                " | High Score: ".into(),
+                get_highest_score(path).yellow(),
+            ])]),
+            GameStyle::Timed5 | GameStyle::Timed10 => Text::from(vec![Line::from(vec![
+                "Score: ".into(),
+                self.score.to_string().yellow(),
+                " | High Score: ".into(),
+                get_highest_score(path).yellow(),
+                " | Time Remaining: ".into(),
+                get_time_remaining().yellow(),
+            ])]),
+        };
 
         Paragraph::new(counter_text)
             .centered()
@@ -60,6 +71,10 @@ impl Widget for &App {
 
         self.grid.render(grid_area, buf);
     }
+}
+
+pub fn get_time_remaining() -> String {
+    todo!()
 }
 
 pub fn get_highest_score(path: PathBuf) -> String {
@@ -103,6 +118,7 @@ mod tests {
             },
             current_screen: Screen::Playing,
             game_style: GameStyle::Normal,
+            chosen_game_style: true,
         }
     }
 

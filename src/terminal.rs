@@ -3,7 +3,7 @@ use std::{io, path::PathBuf};
 use crate::{
     SCORES_PATH,
     app::{App, Direction, Screen, write_scores_to_file},
-    ui::grid::{render_game_over_popup, render_scores_popup},
+    ui::popups::{render_game_over_popup, render_game_style_popup, render_scores_popup},
 };
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
@@ -12,6 +12,11 @@ pub fn run(app: &mut App, terminal: &mut DefaultTerminal) -> io::Result<()> {
     while !app.exit {
         terminal.draw(|frame| {
             draw(app, frame);
+
+            if !app.chosen_game_style {
+                render_game_style_popup(frame, app);
+            }
+
             if app.game_over {
                 let home = std::env::var("HOME").unwrap_or("~".to_string());
 
@@ -70,6 +75,16 @@ pub fn handle_key_event(app: &mut App, key_event: KeyEvent) {
         Screen::Scores => match key_event.code {
             KeyCode::Char('q') => app.exit(),
             KeyCode::Char('s') => app.toggle_scores(),
+            _ => {}
+        },
+        Screen::GameStyle => match key_event.code {
+            KeyCode::Char('n') => app.new_game(),
+            KeyCode::Char('j') => {
+                todo!()
+            }
+            KeyCode::Char('k') => {
+                todo!()
+            }
             _ => {}
         },
     }
